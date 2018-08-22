@@ -1,49 +1,93 @@
 package main
 
-import "net"
-import "fmt"
-import "log"
-import "runtime"
-import "encoding/binary"
+import (
+	"net"
+	"fmt"
+	"encoding/binary"
+	"bufio"
+	"io"
+	"os"
+	"log"
+	"strings"
+)
+
+import "./forward"
 
 // All parsing is based on https://www.ietf.org/rfc/rfc1035.txt
 
-func main() {
-	// listen to incoming udp packets
+var BlockedDomains map[string]bool = map[string]bool{}
 
-	addr := net.UDPAddr{
-		Port: 53,
-		IP:   net.IP{127, 0, 0, 5},
-	}
-	connection, err := net.ListenUDP("udp", &addr)
+func main() {
+
+	ch := make(chan string)
+
+	updateDomainsFromFile("domains.txt")
+
+	forwarder, err := forward.Forward("127.0.0.5:53", "127.0.0.53:53", forward.DefaultTimeout, ch, process)
+
 	if err != nil {
 		panic(err)
 	}
 
-	quit := make(chan struct{})
 
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go listen(connection, quit)
+	for true {
+		msg := <-ch
+		if msg == "quit" {
+			break
+		}
+
+		fmt.Print(msg)
 	}
-	<-quit // hang until an error
+
+	forwarder.Close()
 }
 
-func listen(connection *net.UDPConn, quit chan struct{}) {
-        buffer := make([]byte, 1024)
-        n, remoteAddr, err := 0, new(net.UDPAddr), error(nil)
-        for err == nil {
-                n, remoteAddr, err = connection.ReadFromUDP(buffer)
-				dnsReq := parseDnsRequest(buffer[:n])
-				dnsResponse := dnsAnswer {
-					dnsReq,
-				}
-				log.Print("Got request for ", dnsReq.question.name)
-				responseBytes := dnsRespons2Bytes(dnsResponse)
-				connection.WriteToUDP(responseBytes, remoteAddr)
+func updateDomainsFromFile(fileName string) {
 
+	fmt.Println("Loading blocked domains")
+
+    f, err := os.OpenFile(fileName, os.O_RDONLY, os.ModePerm)
+    if err != nil {
+        log.Fatalf("open file error: %v", err)
+        return
+    }
+    defer f.Close()
+
+    rd := bufio.NewReader(f)
+    for {
+        line, err := rd.ReadString('\n')
+        if err != nil {
+            if err == io.EOF {
+                break
+            }
+
+            log.Fatalf("read file line error: %v", err)
+            return
         }
-        fmt.Println("listener failed - ", err)
-        quit <- struct{}{}
+		line = strings.TrimSpace(line)
+		fmt.Println(line)
+        BlockedDomains[line] = true
+    }
+
+	fmt.Println("Done")
+	return
+}
+
+func process(conn *net.UDPConn, data []byte, addr *net.UDPAddr) bool {
+	dnsReq := parseDnsRequest(data)
+	dnsResponse := dnsAnswer {
+		dnsReq,
+	}
+
+
+	if _, ok := BlockedDomains[dnsReq.question.name]; !ok {
+		return true
+	}
+
+	fmt.Print("X")
+	responseBytes := dnsRespons2Bytes(dnsResponse)
+	conn.WriteTo(responseBytes, addr)
+	return false
 }
 
 type dnsRequestHeader struct {
@@ -212,7 +256,7 @@ func parseDnsQuestion(q []byte) dnsQuestion {
 		offset += bytesUsed
 	}
 
-	return dnsQuestion{ string(labels), q[:bytesRead], 0, 0 }
+	return dnsQuestion{ string(labels[:bytesRead]), q[:bytesRead], 0, 0 }
 }
 
 
