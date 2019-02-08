@@ -12,5 +12,5 @@ blocks:
       - name: Docker build
         commands:
           - checkout
-          - docker build -t Dockerfile .
+          - docker build .
           - docker images
