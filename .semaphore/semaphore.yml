@@ -15,7 +15,7 @@ blocks:
         - name: Build
           commands:
             - checkout
-            - go mod install
+            - go mod download
             - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) $GOPATH/pkg/mod
             - go build -o main .
             - docker build -f Dockerfile.alternative .
