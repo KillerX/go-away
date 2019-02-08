@@ -14,3 +14,15 @@ blocks:
           - checkout
           - docker build .
           - docker images
+  - name: "Direct build"
+    task:
+      prologue:
+        commands:
+          - sem-version go 1.11
+      jobs:
+        - name: Build
+          commands:
+            - checkout
+            - go build -o main .
+						- docker build -f Dockerfile.alternative .
+						- docker images
