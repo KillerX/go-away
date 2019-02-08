@@ -15,6 +15,7 @@ blocks:
         - name: Build
           commands:
             - checkout
+            - cache restore deps-$SEMAPHORE_GIT_BRANCH
             - go mod download
             - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) /home/semaphore/go/pkg/mod
             - go build -o main .
