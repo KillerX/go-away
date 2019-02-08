@@ -14,6 +14,7 @@ blocks:
           - checkout
           - docker build .
           - docker images
+
   - name: "Direct build"
     task:
       prologue:
@@ -24,5 +25,5 @@ blocks:
           commands:
             - checkout
             - go build -o main .
-						- docker build -f Dockerfile.alternative .
-						- docker images
+            - docker build -f Dockerfile.alternative .
+            - docker images
