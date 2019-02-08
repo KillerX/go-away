@@ -12,7 +12,7 @@ import (
 )
 
 import (
-	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 	"goaway/forward"
 )
 
@@ -21,6 +21,10 @@ import (
 var BlockedDomains map[string]bool = map[string]bool{}
 
 func main() {
+
+	logrus.WithFields(logrus.Fields{
+		"animal": "walrus",
+	}).Info("A walrus appears")
 
 	ch := make(chan string)
 
