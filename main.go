@@ -1,17 +1,17 @@
 package main
 
 import (
-	"net"
-	"fmt"
-	"encoding/binary"
 	"bufio"
+	"encoding/binary"
+	"fmt"
 	"io"
-	"os"
 	"log"
+	"net"
+	"os"
 	"strings"
 )
 
-import "./forward"
+import "goaway/forward"
 
 // All parsing is based on https://www.ietf.org/rfc/rfc1035.txt
 
@@ -29,7 +29,6 @@ func main() {
 		panic(err)
 	}
 
-
 	for true {
 		msg := <-ch
 		if msg == "quit" {
@@ -46,28 +45,28 @@ func updateDomainsFromFile(fileName string) {
 
 	fmt.Println("Loading blocked domains")
 
-    f, err := os.OpenFile(fileName, os.O_RDONLY, os.ModePerm)
-    if err != nil {
-        log.Fatalf("open file error: %v", err)
-        return
-    }
-    defer f.Close()
+	f, err := os.OpenFile(fileName, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		log.Fatalf("open file error: %v", err)
+		return
+	}
+	defer f.Close()
 
-    rd := bufio.NewReader(f)
-    for {
-        line, err := rd.ReadString('\n')
-        if err != nil {
-            if err == io.EOF {
-                break
-            }
+	rd := bufio.NewReader(f)
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
 
-            log.Fatalf("read file line error: %v", err)
-            return
-        }
+			log.Fatalf("read file line error: %v", err)
+			return
+		}
 		line = strings.TrimSpace(line)
 		fmt.Println(line)
-        BlockedDomains[line] = true
-    }
+		BlockedDomains[line] = true
+	}
 
 	fmt.Println("Done")
 	return
@@ -75,10 +74,9 @@ func updateDomainsFromFile(fileName string) {
 
 func process(conn *net.UDPConn, data []byte, addr *net.UDPAddr) bool {
 	dnsReq := parseDnsRequest(data)
-	dnsResponse := dnsAnswer {
+	dnsResponse := dnsAnswer{
 		dnsReq,
 	}
-
 
 	if _, ok := BlockedDomains[dnsReq.question.name]; !ok {
 		return true
@@ -91,23 +89,23 @@ func process(conn *net.UDPConn, data []byte, addr *net.UDPAddr) bool {
 }
 
 type dnsRequestHeader struct {
-	id []byte
-	operation int
-	auth bool
-	truncated bool
-	recursion bool
+	id          []byte
+	operation   int
+	auth        bool
+	truncated   bool
+	recursion   bool
 	query_count uint16
 }
 
 type dnsQuestion struct {
-	name string
+	name      string
 	nameBytes []byte
-	qtype uint16
-	qclass uint16
+	qtype     uint16
+	qclass    uint16
 }
 
 type dnsRequest struct {
-	header dnsRequestHeader
+	header   dnsRequestHeader
 	question dnsQuestion
 }
 
@@ -118,8 +116,6 @@ type dnsPayload struct {
 type dnsAnswer struct {
 	request dnsRequest
 }
-
-
 
 func dnsRespons2Bytes(a dnsAnswer) []byte {
 	outBytes := make([]byte, 512)
@@ -136,7 +132,7 @@ func dnsRespons2Bytes(a dnsAnswer) []byte {
 	// RD = 0
 	outBytes[2] = byte(byte3)
 
-	byte4 :=16
+	byte4 := 16
 	// RA = 0
 	// Z = 001
 	// ERR CODE = 0 (No error)
@@ -170,12 +166,12 @@ func dnsRespons2Bytes(a dnsAnswer) []byte {
 
 	//RR TYPE = 1 (A)
 	outBytes[bytesUsed] = byte(0)
-	outBytes[bytesUsed + 1] = byte(1)
+	outBytes[bytesUsed+1] = byte(1)
 	bytesUsed += 2
 
 	//CLASS = 1 (IN)
 	outBytes[bytesUsed] = byte(0)
-	outBytes[bytesUsed + 1] = byte(1)
+	outBytes[bytesUsed+1] = byte(1)
 	bytesUsed += 2
 
 	ttl := make([]byte, 4)
@@ -184,7 +180,7 @@ func dnsRespons2Bytes(a dnsAnswer) []byte {
 	bytesUsed += 4
 
 	outBytes[bytesUsed] = byte(0)
-	outBytes[bytesUsed + 1] = byte(4)
+	outBytes[bytesUsed+1] = byte(4)
 	bytesUsed += 2
 
 	ipBytes := []byte{127, 0, 0, 1}
@@ -197,7 +193,7 @@ func dnsRespons2Bytes(a dnsAnswer) []byte {
 func overwriteAt(insert []byte, list []byte, start int) []byte {
 
 	for i := 0; i < len(insert); i++ {
-		list[start + i] = insert[i]
+		list[start+i] = insert[i]
 	}
 
 	return list
@@ -206,13 +202,13 @@ func overwriteAt(insert []byte, list []byte, start int) []byte {
 func parseDnsRequest(request []byte) dnsRequest {
 
 	id := request[:2]
-	op := int((request[2] & 120) >> 4) // 120 = 011110000
-	auth := int((request[2] & 4) >> 2)// 00000100 = 4
-	trunc := int((request[2] & 2) >> 1)// 00000010 = 2
-	rec := int(request[2] & 1)// 00000001 = 1
+	op := int((request[2] & 120) >> 4)  // 120 = 011110000
+	auth := int((request[2] & 4) >> 2)  // 00000100 = 4
+	trunc := int((request[2] & 2) >> 1) // 00000010 = 2
+	rec := int(request[2] & 1)          // 00000001 = 1
 	qCount := binary.BigEndian.Uint16(request[4:6])
 
-	header := dnsRequestHeader {
+	header := dnsRequestHeader{
 		id,
 		op,
 		!(auth == 0),
@@ -223,7 +219,7 @@ func parseDnsRequest(request []byte) dnsRequest {
 
 	q := parseDnsQuestion(request[12:])
 
-	req := dnsRequest {
+	req := dnsRequest{
 		header,
 		q,
 	}
@@ -245,7 +241,7 @@ func parseDnsQuestion(q []byte) dnsQuestion {
 		}
 
 		for i := 0; i < cnt; i++ {
-			labels[bytesRead] = q[offset + i + 1]
+			labels[bytesRead] = q[offset+i+1]
 			bytesRead++
 			bytesUsed++
 		}
@@ -256,8 +252,5 @@ func parseDnsQuestion(q []byte) dnsQuestion {
 		offset += bytesUsed
 	}
 
-	return dnsQuestion{ string(labels[:bytesRead]), q[:bytesRead], 0, 0 }
+	return dnsQuestion{string(labels[:bytesRead]), q[:bytesRead], 0, 0}
 }
-
-
-

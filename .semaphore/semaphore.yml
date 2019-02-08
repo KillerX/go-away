@@ -15,9 +15,8 @@ blocks:
         - name: Build
           commands:
             - checkout
-            - go env
             - go mod download
-            - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) $GOPATH/pkg/mod
+            - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) /home/semaphore/go/pkg/mod
             - go build -o main .
             - docker build -f Dockerfile.alternative .
             - docker images
