@@ -11,7 +11,10 @@ import (
 	"strings"
 )
 
-import "goaway/forward"
+import (
+	_ "github.com/lib/pq"
+	"goaway/forward"
+)
 
 // All parsing is based on https://www.ietf.org/rfc/rfc1035.txt
 
