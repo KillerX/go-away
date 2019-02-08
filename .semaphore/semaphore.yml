@@ -24,6 +24,9 @@ blocks:
         - name: Build
           commands:
             - checkout
+            - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
+            - go mod install
+            - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) $GOPATH/pkg/mod
             - go build -o main .
             - docker build -f Dockerfile.alternative .
             - docker images
