@@ -6,15 +6,6 @@ agent:
     os_image: ubuntu1804
 
 blocks:
-  - name: "Build"
-    task:
-      jobs:
-      - name: Docker build
-        commands:
-          - checkout
-          - docker build .
-          - docker images
-
   - name: "Direct build"
     task:
       prologue:
